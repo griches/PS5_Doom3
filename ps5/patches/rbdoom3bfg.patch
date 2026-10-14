@@ -223,6 +223,23 @@ index d9f52a96..0dec646b 100644
  
  # Ensure ISPC objects are created before the library
  add_dependencies(${LIB_NAME} ${LIB_NAME}_ispc)
+diff --git a/neo/renderer/RenderSystem_init.cpp b/neo/renderer/RenderSystem_init.cpp
+index ba80049d..6c7b7c35 100644
+--- a/neo/renderer/RenderSystem_init.cpp
++++ b/neo/renderer/RenderSystem_init.cpp
+@@ -292,7 +292,12 @@ idCVar r_useLightGrid( "r_useLightGrid", "1", CVAR_RENDERER | CVAR_BOOL | CVAR_N
+ 
+ idCVar r_exposure( "r_exposure", "0.5", CVAR_ARCHIVE | CVAR_RENDERER | CVAR_FLOAT | CVAR_NEW, "HDR exposure or LDR brightness [-4.0 .. 4.0]", -4.0f, 4.0f );
+ 
++#if defined( __PROSPERO__ )
++// PS5: blood reflections static (the menu's "Static") unless the player picks Dynamic (SSR)
++idCVar r_useSSR( "r_useSSR", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL | CVAR_NEW, "" );
++#else
+ idCVar r_useSSR( "r_useSSR", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL | CVAR_NEW, "" );
++#endif
+ idCVar r_ssrJitter( "r_ssrJitter", "0", CVAR_RENDERER | CVAR_FLOAT | CVAR_NEW, "" );
+ idCVar r_ssrMaxDistance( "r_ssrMaxDistance", "100", CVAR_RENDERER | CVAR_FLOAT | CVAR_NEW, "In meters" );
+ idCVar r_ssrMaxSteps( "r_ssrMaxSteps", "100", CVAR_RENDERER | CVAR_FLOAT | CVAR_NEW, "" );
 diff --git a/neo/sys/DeviceManager_VK.cpp b/neo/sys/DeviceManager_VK.cpp
 index b8a40815..74ff3885 100644
 --- a/neo/sys/DeviceManager_VK.cpp
