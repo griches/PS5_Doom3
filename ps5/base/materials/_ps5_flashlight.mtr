@@ -1,0 +1,37 @@
+/*
+	Doom 3 BFG for the PlayStation 5 - the flashlight's visible beam.
+
+	The original beam materials draw the cone's soft shape into the
+	framebuffer's alpha, then add a dust texture weighted by that alpha
+	(blend gl_dst_alpha, gl_one). In RBDoom3BFG's HDR renderer the dust
+	comes out at full strength over the whole beam mesh: a hard-edged,
+	grainy wedge from the lower left. These replace both with a faint
+	glow in the beam's own soft shape (its alpha), with no dust.
+
+	A material file whose name starts with "_" is read first, so these
+	definitions win over the game's own (as _rbdoom_decals_blood.mtr's do).
+
+	SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+models/items/flashlight/beam1
+{
+	translucent
+	deform tube
+	{
+		blend	gl_src_alpha, gl_one
+		map		makealpha(models/items/flashlight/beam1.tga)
+		rgb		0.12
+	}
+}
+
+models/items/flashlight/beam2
+{
+	translucent
+	deform tube
+	{
+		blend	gl_src_alpha, gl_one
+		map		makealpha(models/items/flashlight/beam1.tga)
+		rgb		0.12
+	}
+}

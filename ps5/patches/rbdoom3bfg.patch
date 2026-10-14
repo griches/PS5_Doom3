@@ -1,0 +1,376 @@
+diff --git a/neo/CMakeLists.txt b/neo/CMakeLists.txt
+index a0d9e6e2..bda9c8d9 100644
+--- a/neo/CMakeLists.txt
++++ b/neo/CMakeLists.txt
+@@ -483,7 +483,7 @@ endif()
+ 
+ # RB: there haven't been requests for a separate map compiler executable by macOS users
+ # and it is ok to not support it until someone also supports TrenchBroomBFG on macOS
+-if(NOT APPLE AND NOT FLATPAK)
++if(NOT APPLE AND NOT FLATPAK AND NOT PS5)
+ 	add_subdirectory(tools/compilers)
+ endif()
+ 
+@@ -1487,7 +1487,11 @@ endif()
+ target_link_libraries(${APP_NAME} nvrhi)
+ target_link_libraries(${APP_NAME} ShaderMakeBlob ${MASKED_OCCLUSION_LIBRARY} ${ISPC_TEXCOMP_LIBRARY})
+ 
+-add_subdirectory(shaders)
+-add_dependencies(Shaders ShaderMake)
+-add_dependencies(${APP_NAME} Shaders ${MASKED_OCCLUSION_LIBRARY} ${ISPC_TEXCOMP_LIBRARY})
++# PS5: the shaders are compiled on the build host (the port's tools/shaders.sh), not by the console's toolchain
++if(NOT PS5)
++	add_subdirectory(shaders)
++	add_dependencies(Shaders ShaderMake)
++	add_dependencies(${APP_NAME} Shaders)
++endif()
++add_dependencies(${APP_NAME} ${MASKED_OCCLUSION_LIBRARY} ${ISPC_TEXCOMP_LIBRARY})
+ 
+diff --git a/neo/framework/common_frame.cpp b/neo/framework/common_frame.cpp
+index f423b389..ed55b3b1 100644
+--- a/neo/framework/common_frame.cpp
++++ b/neo/framework/common_frame.cpp
+@@ -527,6 +527,10 @@ extern idCVar com_activeApp;
+ idCommonLocal::Frame
+ =================
+ */
++#if defined( __PROSPERO__ )
++idCVar com_ps5Speeds( "com_ps5Speeds", "0", CVAR_BOOL | CVAR_SYSTEM | CVAR_NOCHEAT, "PS5: log frame timings every two seconds" );
++#endif
++
+ void idCommonLocal::Frame()
+ {
+ 	try
+@@ -553,13 +557,23 @@ void idCommonLocal::Frame()
+ #endif
+ 		// RB end
+ 
++#if defined( __PROSPERO__ )
++		// PS5: time of each step of the frame, printed with com_speeds
++		static uint64 ps5Mark[ 12 ];
++#define PS5_MARK( n ) ps5Mark[ n ] = Sys_Microseconds()
++#else
++#define PS5_MARK( n )
++#endif
++		PS5_MARK( 0 );
+ 		// pump all the events
+ 		Sys_GenerateEvents();
++		PS5_MARK( 1 );
+ 
+ 		// write config file if anything changed
+ 		WriteConfiguration();
+ 
+ 		eventLoop->RunEventLoop();
++		PS5_MARK( 2 );
+ 
+ 		renderSystem->OnFrame();
+ 
+@@ -626,6 +640,7 @@ void idCommonLocal::Frame()
+ 		//--------------------------------------------
+ 		// this should exit right after vsync, with the GPU idle and ready to draw
+ 		// This may block if the GPU isn't finished renderng the previous frame.
++		PS5_MARK( 3 );
+ 		frameTiming.startSyncTime = Sys_Microseconds();
+ 		const emptyCommand_t* renderCommands = NULL;
+ 
+@@ -641,6 +656,7 @@ void idCommonLocal::Frame()
+ 			renderSystem->SwapCommandBuffers_FinishRendering( &time_frontend, &time_backend, &time_moc, &time_gpu, &stats_backend, &stats_frontend );
+ 		}
+ 		frameTiming.finishSyncTime = Sys_Microseconds();
++		PS5_MARK( 4 );
+ 
+ 		// RB: slow down engine in background so it does not eat up so many resources along other 3D tools
+ 		if( !com_activeApp.GetBool() && !IsServer() /* and not VR */ )
+@@ -794,10 +810,12 @@ void idCommonLocal::Frame()
+ 		// because the GPU is completely idle.
+ 		//--------------------------------------------
+ 
++		PS5_MARK( 5 );
+ 		// Update session and syncronize to the new session state after sleeping
+ 		session->UpdateSignInManager();
+ 		session->Pump();
+ 		session->ProcessSnapAckQueue();
++		PS5_MARK( 6 );
+ 
+ 		if( session->GetState() == idSession::LOADING )
+ 		{
+@@ -847,6 +865,7 @@ void idCommonLocal::Frame()
+ 				Sys_EndJoystickInputEvents();
+ 			}
+ 		}
++		PS5_MARK( 7 );
+ 		if( pauseGame )
+ 		{
+ 			usercmdGen->Clear();
+@@ -890,6 +909,7 @@ void idCommonLocal::Frame()
+ 		gameReturn_t ret = gameThread.RunGameAndDraw( numGameFrames, userCmdMgr, IsClient(), gameFrame - numGameFrames );
+ 
+ 		frameTiming.startRenderTime = Sys_Microseconds();
++		PS5_MARK( 8 );
+ 
+ 		// foresthale 2014-05-12: also check com_editors as many of them are not particularly thread-safe (editLights for example)
+ 		if( !com_smp.GetBool() || com_editors != 0 )
+@@ -910,6 +930,7 @@ void idCommonLocal::Frame()
+ 			Sys_Sleep( com_sleepRender.GetInteger() );
+ 		}
+ 		frameTiming.finishRenderTime = Sys_Microseconds();
++		PS5_MARK( 9 );
+ 
+ 		// make sure the game / draw thread has completed
+ 		// This may block if the game is taking longer than the render back end
+@@ -945,7 +966,9 @@ void idCommonLocal::Frame()
+ 			soundSystem->SetMute( true );
+ 		}
+ 
++		PS5_MARK( 10 );
+ 		soundSystem->Render();
++		PS5_MARK( 11 );
+ 
+ 		// process the game return for map changes, etc
+ 		ProcessGameReturn( ret );
+@@ -964,6 +987,48 @@ void idCommonLocal::Frame()
+ 			lobby.DrawDebugNetworkHUD_ServerSnapshotMetrics( net_drawDebugHud.GetInteger() == 3 );
+ 		}
+ 
++#if defined( __PROSPERO__ )
++		// PS5: with com_ps5Speeds 1, one line every two seconds (writing the log is slow
++		// on the console, so a line a frame would measure the log): frames, average
++		// and worst frame, and the average of each step in milliseconds
++		if( com_ps5Speeds.GetBool() )
++		{
++			static double ps5Sum[ 11 ];
++			static uint64 ps5Start, ps5Last, ps5Worst, ps5PrintTime;
++			static int ps5Frames, ps5Over20;
++			const uint64 now = Sys_Microseconds();
++			if( ps5Last )
++			{
++				ps5Worst = Max( ps5Worst, now - ps5Last );
++				ps5Over20 += now - ps5Last > 20000;
++			}
++			ps5Last = now;
++			for( int i = 0; i < 11; i++ )
++			{
++				ps5Sum[ i ] += ( ps5Mark[ i + 1 ] - ps5Mark[ i ] ) / 1000.0;
++			}
++			if( !ps5Start )
++			{
++				ps5Start = now;
++			}
++			if( ++ps5Frames >= 2 && now - ps5Start >= 2000000 )
++			{
++				const double n = ps5Frames;
++				const uint64 printStart = Sys_Microseconds();
++				Printf( "ps5: %d frames in %.2f s, avg %.1f ms, worst %.1f ms, %d over 20 ms, last log line took %.1f ms | ev %.1f loop %.1f prep %.1f sync %.1f pace %.1f sess %.1f cmd %.1f game %.1f render %.1f wait %.1f snd %.1f\n",
++						ps5Frames, ( now - ps5Start ) / 1e6, ( now - ps5Start ) / 1000.0 / n, ps5Worst / 1000.0, ps5Over20, ps5PrintTime / 1000.0,
++						ps5Sum[ 0 ] / n, ps5Sum[ 1 ] / n, ps5Sum[ 2 ] / n, ps5Sum[ 3 ] / n, ps5Sum[ 4 ] / n, ps5Sum[ 5 ] / n,
++						ps5Sum[ 6 ] / n, ps5Sum[ 7 ] / n, ps5Sum[ 8 ] / n, ps5Sum[ 9 ] / n, ps5Sum[ 10 ] / n );
++				ps5PrintTime = Sys_Microseconds() - printStart;
++				memset( ps5Sum, 0, sizeof( ps5Sum ) );
++				ps5Frames = 0;
++				ps5Over20 = 0;
++				ps5Worst = 0;
++				ps5Start = now;
++			}
++		}
++		else
++#endif
+ 		// report timing information
+ 		if( com_speeds.GetBool() )
+ 		{
+@@ -972,6 +1037,7 @@ void idCommonLocal::Frame()
+ 			int	com_frameMsec = nowTime - lastTime;
+ 			lastTime = nowTime;
+ 			Printf( "frame:%d all:%3d gfr:%3d rf:%3lld bk:%3lld\n", idLib::frameNumber, com_frameMsec, time_gameFrame, time_frontend / 1000, time_backend / 1000 );
++
+ 			time_gameFrame = 0;
+ 			time_gameDraw = 0;
+ 		}
+diff --git a/neo/libs/ispc_texcomp/CMakeLists.txt b/neo/libs/ispc_texcomp/CMakeLists.txt
+index d9f52a96..0dec646b 100644
+--- a/neo/libs/ispc_texcomp/CMakeLists.txt
++++ b/neo/libs/ispc_texcomp/CMakeLists.txt
+@@ -21,7 +21,7 @@ else()
+     find_program(ISPC_EXECUTABLE ispc)
+ endif()
+ 
+-if(NOT ISPC_EXECUTABLE)
++if(NOT ISPC_EXECUTABLE AND NOT ISPC_PREBUILT_DIR)
+     message(FATAL_ERROR "ISPC compiler not found. Please install ISPC and ensure it is in the PATH.")
+ endif()
+ 
+@@ -43,8 +43,13 @@ else()
+ endif()
+ 
+ # ISPC compilation command
++# PS5: the kernel compiled elsewhere (the build host's ISPC has no x86 backend), the same target
++if (ISPC_PREBUILT_DIR)
++    set(ISPC_OBJ ${ISPC_PREBUILT_DIR}/kernel.o)
++    set(ISPC_HEADER ${ISPC_PREBUILT_DIR}/kernel_ispc.h)
++    set_source_files_properties(${ISPC_OBJ} PROPERTIES EXTERNAL_OBJECT TRUE GENERATED FALSE)
+ # Target for x86_64
+-if (USE_INTRINSICS_SSE)
++elseif (USE_INTRINSICS_SSE)
+     add_custom_command(
+         OUTPUT ${ISPC_OBJ} ${ISPC_HEADER}
+         COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SOURCE}
+@@ -81,6 +86,9 @@ target_include_directories(${LIB_NAME} PUBLIC
+     ${CMAKE_CURRENT_SOURCE_DIR}
+     ${CMAKE_CURRENT_BINARY_DIR} # For kernel.h
+ )
++if (ISPC_PREBUILT_DIR)
++    target_include_directories(${LIB_NAME} PUBLIC ${ISPC_PREBUILT_DIR})
++endif()
+ 
+ # Ensure ISPC objects are created before the library
+ add_dependencies(${LIB_NAME} ${LIB_NAME}_ispc)
+diff --git a/neo/sys/DeviceManager_VK.cpp b/neo/sys/DeviceManager_VK.cpp
+index b8a40815..74ff3885 100644
+--- a/neo/sys/DeviceManager_VK.cpp
++++ b/neo/sys/DeviceManager_VK.cpp
+@@ -39,6 +39,11 @@
+ #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
+ #include <vulkan/vulkan.hpp>
+ 
++#if defined( __PROSPERO__ )
++// PS5: RADV is linked into the title and there is no loader: every command comes from its entry point
++extern "C" VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_icdGetInstanceProcAddr( VkInstance instance, const char* name );
++#endif
++
+ #if defined(__APPLE__)
+ 	#if defined( USE_MoltenVK )
+ 		// SRS - Needed for using MoltenVK's advanced performance statistics
+@@ -1317,6 +1322,9 @@ bool DeviceManager_VK::CreateDeviceAndSwapChain()
+ 	m_DeviceParams.enableNvrhiValidationLayer = r_useValidationLayers.GetInteger() > 0;
+ 	m_DeviceParams.enableDebugRuntime = r_useValidationLayers.GetInteger() > 1;
+ 
++#if defined( __PROSPERO__ )
++	vkGetInstanceProcAddr = vk_icdGetInstanceProcAddr;
++#else
+ 	// SRS - DynamicLoader is in a separate namespace in newer versions of Vulkan-Hpp
+ #if VK_HEADER_VERSION >= 301
+ 	using VulkanDynamicLoader = vk::detail::DynamicLoader;
+@@ -1357,6 +1365,7 @@ bool DeviceManager_VK::CreateDeviceAndSwapChain()
+ 	static const VulkanDynamicLoader dl;
+ #endif
+ 	vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>( "vkGetInstanceProcAddr" );
++#endif
+ 	VULKAN_HPP_DEFAULT_DISPATCHER.init( vkGetInstanceProcAddr );
+ 
+ #define CHECK(a) if (!(a)) { return false; }
+diff --git a/neo/sys/posix/platform_linux.cpp b/neo/sys/posix/platform_linux.cpp
+index daa833cb..9ca00089 100644
+--- a/neo/sys/posix/platform_linux.cpp
++++ b/neo/sys/posix/platform_linux.cpp
+@@ -59,8 +59,17 @@ static int cmdargc = 0;
+ Sys_EXEPath
+ ==============
+ */
++#if defined( __PROSPERO__ )
++// the console's system service: starts an executable of the title in place of this one
++extern "C" int sceSystemServiceLoadExec( const char* path, const char* const* argv );
++#endif
++
+ const char* Sys_EXEPath()
+ {
++#if defined( __PROSPERO__ )
++	// PS5: the title's own folder is /app0, and the game's base path with it
++	return "/app0/eboot.bin";
++#endif
+ 	static char	buf[ 1024 ];
+ 	idStr		linkpath;
+ 	int			len;
+@@ -422,6 +431,15 @@ Sys_ReLaunch
+ */
+ void Sys_ReLaunch()
+ {
++#if defined( __PROSPERO__ )
++	// PS5: no fork or exec in a title. The settings are saved, then the system
++	// starts the title's own eboot again in place of this one (as a console game
++	// restarts itself); it returns only if it could not
++	cmdSystem->ExecuteCommandText( "writeconfig " CONFIG_FILE "\n" );
++	const int result = sceSystemServiceLoadExec( "/app0/eboot.bin", NULL );
++	common->Warning( "Sys_ReLaunch: sceSystemServiceLoadExec failed (0x%08x); restart the game for this change", result );
++	return;
++#endif
+ 	// DG: implementing this... basic old fork() exec() (+ setsid()) routine..
+ 	// NOTE: this function used to have parameters: the commandline arguments, but as one string..
+ 	//       for Linux/Unix we want one char* per argument so we'll just add the friggin'
+@@ -511,6 +529,34 @@ main
+ */
+ int main( int argc, const char** argv )
+ {
++#if defined( __PROSPERO__ )
++	// PS5: a title is started with no arguments. The pad is the only input, so it
++	// is always on (the saved config cannot turn it off); no log file, since a write
++	// to the title's folder costs about 145 ms on the console (+set logFile 1 in
++	// /app0/userdata/args.txt for /app0/userdata/base/qconsole.log). args.txt may
++	// add more, as on a command line
++	static idStrList ps5Args;
++	static const char* ps5Argv[ 64 ];
++	ps5Args.Append( "RBDoom3BFG" );
++	ps5Args.Append( "+set" );
++	ps5Args.Append( "in_useJoystick" );
++	ps5Args.Append( "1" );
++	if( FILE* argsFile = fopen( "/app0/userdata/args.txt", "r" ) )
++	{
++		char word[ 256 ];
++		while( fscanf( argsFile, "%255s", word ) == 1 && ps5Args.Num() < 64 )
++		{
++			ps5Args.Append( word );
++		}
++		fclose( argsFile );
++	}
++	for( int i = 0; i < ps5Args.Num(); i++ )
++	{
++		ps5Argv[ i ] = ps5Args[ i ].c_str();
++	}
++	argc = ps5Args.Num();
++	argv = ps5Argv;
++#endif
+ 	// DG: needed for Sys_ReLaunch()
+ 	cmdargc = argc;
+ 	cmdargv = argv;
+diff --git a/neo/sys/posix/posix_main.cpp b/neo/sys/posix/posix_main.cpp
+index 28b27b20..77c5a5b9 100644
+--- a/neo/sys/posix/posix_main.cpp
++++ b/neo/sys/posix/posix_main.cpp
+@@ -96,7 +96,10 @@ static char exit_spawn[ 1024 ];
+  */
+ const char* Sys_DefaultSavePath()
+ {
+-#if defined(__APPLE__)
++#if defined( __PROSPERO__ )
++	// PS5: what a title may write is under its own folder
++	savepath = "/app0/userdata";
++#elif defined(__APPLE__)
+ 	char* base_path = SDL_GetPrefPath( "", "RBDOOM-3-BFG" );
+ 	if( base_path )
+ 	{
+diff --git a/neo/sys/sdl/sdl_events.cpp b/neo/sys/sdl/sdl_events.cpp
+index 23cd1b41..47876f4c 100644
+--- a/neo/sys/sdl/sdl_events.cpp
++++ b/neo/sys/sdl/sdl_events.cpp
+@@ -777,6 +777,23 @@ sysEvent_t Sys_GetEvent()
+ 				return res;
+ 
+ 			case SDL_CONTROLLERDEVICEADDED:
++				// a controller that appears after start-up (a console's pad reports
++				// itself a moment after Sys_InitInput, a pad plugged in later)
++				if( !SDL_GameControllerFromInstanceID( SDL_JoystickGetDeviceInstanceID( ev.cdevice.which ) ) )
++				{
++					if( SDL_GameController* controller = SDL_GameControllerOpen( ev.cdevice.which ) )
++					{
++						common->Printf( "GameController %i name: %s\n", ev.cdevice.which, SDL_GameControllerName( controller ) );
++					}
++					else
++					{
++						common->Printf( "Could not open gamecontroller %i: %s\n", ev.cdevice.which, SDL_GetError() );
++					}
++				}
++				continue;
++
++			case SDL_AUDIODEVICEADDED:
++			case SDL_AUDIODEVICEREMOVED:
+ 			case SDL_CONTROLLERDEVICEREMOVED:
+ 			case SDL_CONTROLLERDEVICEREMAPPED:
+ 			case SDL_CONTROLLERTOUCHPADDOWN:

@@ -1,0 +1,8 @@
+# game data (yours), downloads, build output
+/data/
+/dist/
+/build/
+/klog/
+/.deps/
+/build-shaders.log
+.DS_Store
