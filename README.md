@@ -31,12 +31,12 @@ This is an unofficial port. It is not part of RBDoom3BFG and is not supported
 by it: **please do not take PS5 problems to the RBDoom3BFG project.** Report them
 [here](https://github.com/griches/PS5_Doom3/issues).
 
-## Early days
+## This is an early release: 1.0
 
-**There is no release yet, and it is not fully tested.** It was brought up on
-one console on 2026-10-14 and played through the start of the Doom 3 campaign.
-Resurrection of Evil, The Lost Mission and the classic games have not been
-played on a PS5. Expect faults.
+**It is not fully tested.** It was brought up on one console on 2026-10-14 and
+played through the start of the Doom 3 campaign. Resurrection of Evil, The Lost
+Mission and the classic games have not been played on a PS5. Expect faults, and
+keep a copy of your saves.
 
 ## What you need
 
@@ -62,10 +62,13 @@ played on a PS5. Expect faults.
 
 ## Installing
 
-Build the title folder (see [Building it yourself](#building-it-yourself)),
-then with an FTP program copy, into `/data/homebrew/` on the console:
+Download `Doom3BFG-PS5-v<version>.zip` from the
+[releases page](https://github.com/griches/PS5_Doom3/releases/latest) and unzip
+it (or build the title folder yourself: see
+[Building it yourself](#building-it-yourself)). Then with an FTP program
+(FileZilla, Cyberduck, WinSCP) copy, into `/data/homebrew/` on the console:
 
-1. The whole `PPSA99313` folder from `dist/`.
+1. The whole `PPSA99313` folder.
 2. Everything in your BFG Edition's `base` folder, into `PPSA99313/base/`,
    **except `default.cfg`**: the title's own is newer.
 3. The three `_rbdoom_*.pk4` files, into `PPSA99313/base/` as well.
@@ -84,6 +87,9 @@ That is about 9 GB. "Doom 3 BFG" then appears on the home screen. If it does
 not, check that the folder is exactly `/data/homebrew/PPSA99313/` with
 `eboot.bin` directly inside it, and that ShadowMountPlus is running. The first
 start takes about 40 seconds to reach the menu.
+
+To update, copy the new release's `PPSA99313` folder over the old one. Your
+game data, saves and settings are left alone.
 
 ## Playing
 
