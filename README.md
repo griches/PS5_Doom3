@@ -53,110 +53,12 @@ keep a copy of your saves.
   DepotDownloader -app 208200 -os windows -username YOUR_STEAM_LOGIN -dir doom3bfg
   ```
 
-  You want the files ending in `.resources` (with `maps/`, `wads/`, `video/`
-  and the rest). The original Doom 3's `pak000.pk4`...`pak008.pk4` are not used.
+  It is the folder full of `.resources` files (with `maps/`, `video/`, `wads/`
+  and so on). The original Doom 3's `pak000.pk4`...`pak008.pk4` are not used.
 - **RBDoom3BFG's three data packs**, from its
   [1.6.0 release](https://github.com/RobertBeckebans/RBDOOM-3-BFG/releases/tag/v1.6.0)
   (the `full` 7z): `base/_rbdoom_core.pk4`, `base/_rbdoom_blood.pk4` and
   `base/_rbdoom_global_illumination_data.pk4`.
-
-## The files you need
-
-Everything goes in one folder on the console, `/data/homebrew/PPSA99313/base/`,
-beside the release's own files. From the Steam download of DOOM 3 (BFG
-Edition), English, that is 383 files, about 7.4 GB, plus RBDoom3BFG's three
-packs (1.5 GB):
-
-| File or folder | Size | What it is |
-| --- | --- | --- |
-| `_common.resources`, `_common.crc` | 80 MB | The game's shared data: materials, models, scripts, menus |
-| `_ordered.resources`, `_ordered.crc` | 11 MB | Start-up data, read in order |
-| `_sound_pc.resources`, `_sound_pc.crc` | 546 MB | Sound effects and music |
-| `_sound_pc_en.resources`, `_sound_pc_en.crc` | 134 MB | English speech (other languages have their own `_sound_pc_XX` files) |
-| `_sound_pc_fr.crc`, `_gr`, `_it`, `_jp`, `_sp` `.crc` | small | Indexes for the other languages' speech (harmless without them) |
-| `maps/` | 5.9 GB | 60 levels, a `.resources` and a `.crc` each (120 files) |
-| `video/` | 83 MB | 31 Bink movies: cut-scenes and menu backgrounds |
-| `sound/VO/video/` | 182 MB | 20 Bink movies with speech: the PDA videos |
-| `strings/english.lang` | 0.6 MB | The game's text |
-| `wads/DOOM.WAD`, `DOOM2.WAD`, `NERVE.WAD` | 30 MB | Classic Doom, Doom II and No Rest for the Living |
-| `classicmusic/` | 5.6 MB | `gravis.cfg` and 190 instrument patches, for the classic games' music |
-| `joy_360_0.cfg`, `joy_360_1.cfg`, `joy_lefty.cfg`, `joy_righty.cfg` | small | Controller layouts |
-| `_rbdoom_core.pk4` | 4.9 MB | RBDoom3BFG's own assets (from its release) |
-| `_rbdoom_blood.pk4` | 24 MB | RBDoom3BFG's blood decals (from its release) |
-| `_rbdoom_global_illumination_data.pk4` | 1.5 GB | RBDoom3BFG's baked lighting for every level (from its release) |
-
-Leave out Steam's `default.cfg` (the release's own is newer), and Steam's
-`Doom3BFG.exe`, `.dll` files and `_CommonRedist` folder, which are for Windows.
-
-<details>
-<summary>Every level in <code>maps/</code></summary>
-
-Doom 3: admin, alphalabs1, alphalabs2, alphalabs3, alphalabs4, caverns1, caverns2, comm1, commoutside, cpu, cpuboss, delta1, delta2a, delta2b, delta3, delta4, delta5, enpro, hell1, hellhole, mars_city1, mars_city2, mc_underground, monorail, recycling1, recycling2, site3
-
-Resurrection of Evil: deltax, erebus1, erebus2, erebus3, erebus4, erebus5, erebus6, hell, phobos1, phobos2, phobos3, phobos4
-
-The Lost Mission: le_enpro1, le_enpro2, le_exis1, le_exis2, le_hell, le_hell_post, le_underground, le_underground2
-
-Multiplayer: d3ctf1, d3ctf2, d3ctf3, d3ctf4, d3dm1, d3dm2, d3dm3, d3dm4, d3dm5, d3xpdm1, d3xpdm2, d3xpdm3, d3xpdm4
-
-Each is `maps/<name>.resources` with `maps/<name>.crc`.
-</details>
-
-<details>
-<summary>Every movie</summary>
-
-- `video/admin/betruger.bik`
-- `video/comm1/swann_vidphone1.bik`
-- `video/comm1/swann_vidphone2.bik`
-- `video/comm1/swann_vidphone3.bik`
-- `video/data.bik`
-- `video/delta1/sarge_video1.bik`
-- `video/enpro1/lm_meyers_enpro.bik`
-- `video/erebusteam.bik`
-- `video/fireball.bik`
-- `video/hellhole/rescue.bik`
-- `video/intro/introloop.bik`
-- `video/loadvideo.bik`
-- `video/mars1.bik`
-- `video/mars_rotation.bik`
-- `video/marscity/decom.bik`
-- `video/marscity/dropship.bik`
-- `video/marscity/monoflyby.bik`
-- `video/marscity/sarge_mission_brief.bik`
-- `video/marscity/sci_team_request.bik`
-- `video/marscity/ship.bik`
-- `video/mc_underground/inv1sm.bik`
-- `video/mc_underground/inv2sm.bik`
-- `video/mc_underground/inv3.bik`
-- `video/mc_underground/inv4sm.bik`
-- `video/mc_underground/inv5sm.bik`
-- `video/mc_underground/inv6sm.bik`
-- `video/mc_underground/inv7sm.bik`
-- `video/mcneil.bik`
-- `video/radar.bik`
-- `video/recycling2/cs_bert01_composite.bik`
-- `video/recycling2/cs_bert02_composite.bik`
-- `sound/VO/video/deployment.bik`
-- `sound/VO/video/epd.bik`
-- `sound/VO/video/generator.bik`
-- `sound/VO/video/grabber.bik`
-- `sound/VO/video/hydrocon.bik`
-- `sound/VO/video/mfs.bik`
-- `sound/VO/video/video_alphalabs_intro.bik`
-- `sound/VO/video/video_ancient_civ.bik`
-- `sound/VO/video/video_bfg.bik`
-- `sound/VO/video/video_chaingun.bik`
-- `sound/VO/video/video_demon_museum.bik`
-- `sound/VO/video/video_ian_report.bik`
-- `sound/VO/video/video_ipn_news.bik`
-- `sound/VO/video/video_marine_sops.bik`
-- `sound/VO/video/video_meyers_report.bik`
-- `sound/VO/video/video_plasmagun.bik`
-- `sound/VO/video/video_recycling.bik`
-- `sound/VO/video/video_soulcube.bik`
-- `sound/VO/video/video_tablets.bik`
-- `sound/VO/video/video_uac_welcome.bik`
-</details>
 
 ## Installing
 
@@ -167,9 +69,9 @@ it (or build the title folder yourself: see
 (FileZilla, Cyberduck, WinSCP) copy, into `/data/homebrew/` on the console:
 
 1. The whole `PPSA99313` folder.
-2. Everything in your BFG Edition's `base` folder, into `PPSA99313/base/`,
-   **except `default.cfg`**: the title's own is newer.
-3. The three `_rbdoom_*.pk4` files, into `PPSA99313/base/` as well.
+2. Your whole BFG Edition `base` folder, into `PPSA99313/` (it joins the
+   title's own `base` folder; replacing files it asks about is fine).
+3. The three `_rbdoom_*.pk4` files, into `PPSA99313/base/`.
 
 ```text
 /data/homebrew/PPSA99313/eboot.bin
@@ -177,7 +79,7 @@ it (or build the title folder yourself: see
 /data/homebrew/PPSA99313/sce_module/
 /data/homebrew/PPSA99313/licenses/
 /data/homebrew/PPSA99313/base/renderprogs2/            (the title's shaders)
-/data/homebrew/PPSA99313/base/_common.resources        (yours, and the rest of your base folder)
+/data/homebrew/PPSA99313/base/_common.resources        (your base folder's files)
 /data/homebrew/PPSA99313/base/_rbdoom_core.pk4         (and the other two packs)
 ```
 
@@ -208,6 +110,9 @@ RBDoom3BFG's own controller layout:
 
 The gamepad is always on: the PC game starts with it switched off, and the PS5
 build turns it on at every launch.
+
+Blood reflections start as Static; System Options switches them to Dynamic
+(screen-space reflections).
 
 Saves and settings are kept in `/data/homebrew/PPSA99313/userdata/`.
 
