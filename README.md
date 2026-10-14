@@ -7,17 +7,6 @@
 A PS5 homebrew port of **[RBDOOM-3-BFG](https://github.com/RobertBeckebans/RBDOOM-3-BFG)**,
 Robert Beckebans' modern engine for Doom 3 BFG Edition.
 
-> ## The engine is RBDoom3BFG's
->
-> [RBDOOM-3-BFG](https://github.com/RobertBeckebans/RBDOOM-3-BFG), by Robert
-> Beckebans and its contributors, is what makes this possible: id Software's
-> Doom 3 BFG Edition source, brought up to date with a Vulkan renderer (through
-> NVIDIA's NVRHI), physically based lighting, baked global illumination, shadow
-> maps, SSAO, TAA and a great deal more. This repository adds only what a PS5
-> needs on top of it: a patch of about 150 lines, the console's drivers and
-> a build recipe. If you enjoy this, the thanks belong there. **Please star and
-> support [RobertBeckebans/RBDOOM-3-BFG](https://github.com/RobertBeckebans/RBDOOM-3-BFG).**
-
 The game runs natively on the console at 3840x2160, drawn with Vulkan through
 RADV (Mesa's AMD driver, ported to the PS5). It plays the BFG Edition's three
 campaigns, Doom 3, Resurrection of Evil and The Lost Mission, and has the
